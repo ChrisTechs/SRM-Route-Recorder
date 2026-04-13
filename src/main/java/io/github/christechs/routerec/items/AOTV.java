@@ -38,9 +38,24 @@ public class AOTV implements CustomItem {
         if (block.isAir() || block.isLiquid()) return true;
         String name = block.name().toLowerCase();
 
-        if (name.contains("torch") || name.contains("fire")) return true;
+        if (name.contains("torch") || name.contains("fire") || name.contains("vine") ||
+                name.contains("button") || name.contains("lever") || name.contains("ladder") ||
+                name.contains("sign") || name.contains("wire") || name.contains("comparator") ||
+                name.contains("repeater") || name.contains("rail") || name.contains("skull") ||
+                name.contains("head") || name.contains("pot") || name.contains("web") ||
+                name.contains("portal") || name.contains("pressure_plate") || name.contains("tripwire")) {
+            return true;
+        }
 
-        return name.contains("wall") || name.contains("fence") || name.contains("skull") || name.contains("head");
+        if (name.equals("minecraft:snow") || name.contains("flower") || name.contains("grass") ||
+                name.contains("bush") || name.contains("sapling") || name.contains("crop") ||
+                name.contains("stem") || name.contains("seagrass") || name.contains("sugarcane") ||
+                name.endsWith("mushroom") || name.contains("wart") || name.contains("plant") ||
+                name.contains("lantern") || name.contains("leaf")) {
+            return true;
+        }
+
+        return name.contains("wall") || name.contains("fence");
     }
 
     private static boolean isSolidForStandardAotv(Block block) {

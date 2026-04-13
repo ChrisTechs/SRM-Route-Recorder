@@ -92,7 +92,10 @@ public class RecorderManager {
 
     public static void recordEtherwarp(Pos target) {
         if (!isRecording || isPaused) return;
-        addCoordinateToArray("etherwarps", target.asVec().sub(0, 1, 0));
+
+        Vec blockPos = new Vec(target.blockX(), target.blockY() - 1, target.blockZ());
+
+        addCoordinateToArray("etherwarps", blockPos);
     }
 
     public static void recordMine(Pos pos) {
