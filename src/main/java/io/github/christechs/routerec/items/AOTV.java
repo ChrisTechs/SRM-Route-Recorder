@@ -156,10 +156,10 @@ public class AOTV implements CustomItem {
             Block block = instance.getBlock(x, y, z);
             String name = block.name().toLowerCase();
 
-            if (block.isAir() || block.isLiquid() || name.contains("torch") || name.contains("fire")) return false;
-
             boolean isFence = name.contains("fence");
             boolean isHead = name.contains("head") || name.contains("skull");
+
+            if (isEtherwarpPassable(block) && !(isFence || isHead)) return false;
 
             if (isFence || isHead) {
                 double minX = x + 0.25, maxX = x + 0.75;

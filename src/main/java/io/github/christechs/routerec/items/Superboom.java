@@ -76,7 +76,7 @@ public class Superboom implements CustomItem {
                 return;
             }
 
-            int limit = 500;
+            int limit = 100;
             while (!queue.isEmpty() && limit > 0) {
                 Pos current = queue.poll();
                 if (brokenBlocks.containsKey(current)) continue;
@@ -100,7 +100,12 @@ public class Superboom implements CustomItem {
                 for (int[] offset : NEIGHBOR_OFFSETS) {
                     Pos neighbor = current.add(offset[0], offset[1], offset[2]);
                     if (!brokenBlocks.containsKey(neighbor)) {
+                        Block neighborBlock = instance.getBlock(neighbor);
+
                         if (isCrackedBrick(instance, neighbor) || isCrypt(instance, neighbor)) {
+                            queue.add(neighbor);
+                        }
+                        else if (isCryptTop(currentBlock) && isCryptTop(neighborBlock)) {
                             queue.add(neighbor);
                         }
                     }
