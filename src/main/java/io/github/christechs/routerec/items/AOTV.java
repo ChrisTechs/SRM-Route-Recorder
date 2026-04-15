@@ -139,6 +139,8 @@ public class AOTV implements CustomItem {
             double finalDist = Math.max(0.0, hitDist.get() - 0.2);
             Pos target = startPos.add(direction.mul(finalDist));
 
+            player.setVelocity(player.getVelocity().withY(0.0));
+
             player.teleport(target);
         }
     }
