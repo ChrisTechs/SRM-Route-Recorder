@@ -68,6 +68,9 @@ tasks {
         }
 
         configuration("proguard-rules.pro")
+        ignorewarnings()
+        dontwarn()
+        dontnote()
         verbose()
     }
 
