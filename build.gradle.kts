@@ -50,9 +50,19 @@ tasks {
         outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-minified.jar"))
 
         val javaHome = System.getProperty("java.home")
-        listOf("java.base", "java.logging", "java.desktop", "java.management", "jdk.jfr", "jdk.unsupported").forEach { mod ->
-            val filter = if (mod == "java.base") mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class") else emptyMap<String, String>()
-            libraryjars(filter, "$javaHome/jmods/$mod.jmod")
+        val modules = listOf(
+            "java.base", "java.logging", "java.desktop", "java.management",
+            "java.naming", "java.rmi", "java.scripting", "java.sql", "java.xml",
+            "jdk.jfr", "jdk.unsupported", "jdk.management", "jdk.net"
+        )
+
+        modules.forEach { mod ->
+            val filter = if (mod == "java.base") mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class") else emptyMap()
+            val jmodFile = File("$javaHome/jmods/$mod.jmod")
+
+            if (jmodFile.exists()) {
+                libraryjars(filter, jmodFile.absolutePath)
+            }
         }
 
         configuration("proguard-rules.pro")

@@ -1,5 +1,6 @@
 -dontobfuscate
 -dontoptimize
+-ignorewarnings
 -dontwarn **
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,Exceptions
 
