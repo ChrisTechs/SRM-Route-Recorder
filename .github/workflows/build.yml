@@ -22,8 +22,14 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew build
 
-      - name: Upload built mod JAR
+      - name: Upload Minified JAR (Production)
         uses: actions/upload-artifact@v4.3.0
         with:
-          name: mod-jar
-          path: build/libs/*.jar
+          name: Minestom-Dungeons-Minified
+          path: build/libs/*-minified.jar
+
+      - name: Upload Fat JAR (Debug/All)
+        uses: actions/upload-artifact@v4.3.0
+        with:
+          name: Minestom-Dungeons-Full
+          path: build/libs/*-all.jar
