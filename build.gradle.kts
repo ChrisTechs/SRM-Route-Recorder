@@ -49,19 +49,21 @@ tasks {
         injars(shadowJar.get().archiveFile)
         outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-minified.jar"))
 
-        val javaHome = System.getProperty("java.home")
-        val modules = listOf(
-            "java.base", "java.logging", "java.desktop", "java.management",
-            "java.naming", "java.rmi", "java.scripting", "java.sql", "java.xml",
-            "jdk.jfr", "jdk.unsupported", "jdk.management", "jdk.net"
-        )
+        val service = project.extensions.getByType<JavaToolchainService>()
+        val javaExtension = project.extensions.getByType<JavaPluginExtension>()
 
-        modules.forEach { mod ->
-            val filter = if (mod == "java.base") mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class") else emptyMap()
-            val jmodFile = File("$javaHome/jmods/$mod.jmod")
+        val toolchainPath = service.launcherFor(javaExtension.toolchain)
+            .get().metadata.installationPath.asFile
 
-            if (jmodFile.exists()) {
-                libraryjars(filter, jmodFile.absolutePath)
+        val jmodsDir = File(toolchainPath, "jmods")
+
+        if (jmodsDir.exists()) {
+            jmodsDir.listFiles { f: File -> f.name.endsWith(".jmod") }?.forEach { file ->
+                val filter = if (file.name == "java.base.jmod") {
+                    mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class")
+                } else emptyMap<String, String>()
+
+                libraryjars(filter, file.absolutePath)
             }
         }
 
