@@ -52,16 +52,13 @@ tasks {
         val javaHome = System.getenv("JAVA_HOME") ?: System.getProperty("java.home")
         val jmodsDir = File(javaHome, "jmods")
 
-        if (jmodsDir.exists()) {
-            println("ProGuard: Loading JMODs from $javaHome")
-            jmodsDir.listFiles()?.forEach { file ->
-                if (file.name.endsWith(".jmod")) {
-                    val filter = if (file.name == "java.base.jmod") {
-                        mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class")
-                    } else emptyMap<String, String>()
+        jmodsDir.listFiles()?.forEach { file ->
+            if (file.name.endsWith(".jmod")) {
+                val filter = if (file.name == "java.base.jmod") {
+                    mapOf("jarfilter" to "!**.jar", "filter" to "!module-info.class")
+                } else emptyMap<String, String>()
 
-                    libraryjars(filter, file.absolutePath)
-                }
+                libraryjars(filter, file.absolutePath)
             }
         }
 

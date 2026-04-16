@@ -16,6 +16,19 @@ jobs:
           distribution: temurin
           java-version: 25
 
+      - name: Download and Install Missing JMODs
+        run: |
+            JAVA_HOME_PATH="${{ env.JAVA_HOME }}"
+            
+            curl -L "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jmods/hotspot/normal/eclipse?project=jdk" -o jmods.tar.gz
+            
+            tar -xzf jmods.tar.gz
+            mkdir -p "$JAVA_HOME_PATH/jmods"
+            mv jdk-25*-jmods/* "$JAVA_HOME_PATH/jmods/"
+            
+            rm -rf jmods.tar.gz jdk-25*-jmods
+            ls -l "$JAVA_HOME_PATH/jmods"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
