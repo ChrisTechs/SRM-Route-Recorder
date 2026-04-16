@@ -33,18 +33,23 @@ java {
     }
 }
 
+val copyDataNextToJar = tasks.register<Copy>("copyDataNextToJar") {
+    from(layout.projectDirectory.dir("routes")) { into("routes") }
+    from(layout.projectDirectory.dir("polar_worlds")) { into("polar_worlds") }
+    into(layout.buildDirectory.dir("libs"))
+}
+
 tasks {
     shadowJar {
         archiveClassifier.set("all")
         entryCompression = ZipEntryCompression.DEFLATED
-
         manifest {
             attributes("Main-Class" to "io.github.christechs.routerec.RouteRecorderServer")
         }
     }
 
     register<ProGuardTask>("minifyJar") {
-        dependsOn(shadowJar)
+        dependsOn(shadowJar, copyDataNextToJar)
 
         injars(shadowJar.get().archiveFile)
         outjars(layout.buildDirectory.file("libs/${project.name}-${project.version}-minified.jar"))
@@ -70,6 +75,6 @@ tasks {
     }
 
     build {
-        dependsOn("minifyJar")
+        dependsOn("minifyJar", copyDataNextToJar)
     }
 }

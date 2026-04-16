@@ -1,11 +1,20 @@
-name: Run Gradle Build
+name: Build and Release Minestom Dungeons
 on:
-  - push
-  - pull_request
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   gradle:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4.1.1
@@ -18,16 +27,12 @@ jobs:
 
       - name: Download and Install Missing JMODs
         run: |
-            JAVA_HOME_PATH="${{ env.JAVA_HOME }}"
-            
-            curl -L "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jmods/hotspot/normal/eclipse?project=jdk" -o jmods.tar.gz
-            
-            tar -xzf jmods.tar.gz
-            mkdir -p "$JAVA_HOME_PATH/jmods"
-            mv jdk-25*-jmods/* "$JAVA_HOME_PATH/jmods/"
-            
-            rm -rf jmods.tar.gz jdk-25*-jmods
-            ls -l "$JAVA_HOME_PATH/jmods"
+          JAVA_HOME_PATH="${{ env.JAVA_HOME }}"
+          curl -L "https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jmods/hotspot/normal/eclipse?project=jdk" -o jmods.tar.gz
+          tar -xzf jmods.tar.gz
+          mkdir -p "$JAVA_HOME_PATH/jmods"
+          mv jdk-25*-jmods/* "$JAVA_HOME_PATH/jmods/"
+          rm -rf jmods.tar.gz jdk-25*-jmods
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -35,14 +40,34 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew build
 
-      - name: Upload Minified JAR (Production)
-        uses: actions/upload-artifact@v4.3.0
-        with:
-          name: Minestom-Dungeons-Minified
-          path: build/libs/*-minified.jar
+      - name: Package Release ZIPs
+        run: |
+          cd build/libs
+          zip -r ../../Minestom-Dungeons-Minified.zip *-minified.jar routes/ polar_worlds/
+          zip -r ../../Minestom-Dungeons-Full.zip *-all.jar routes/ polar_worlds/
+          cd ../..
 
-      - name: Upload Fat JAR (Debug/All)
+      - name: Upload Artifacts (Internal)
         uses: actions/upload-artifact@v4.3.0
         with:
-          name: Minestom-Dungeons-Full
-          path: build/libs/*-all.jar
+          name: Build-Output
+          path: |
+            Minestom-Dungeons-Minified.zip
+            Minestom-Dungeons-Full.zip
+
+      - name: Generate Attestations
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'Minestom-Dungeons-Minified.zip'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body: "Automatic release for version ${{ github.ref_name }}"
+          files: |
+            Minestom-Dungeons-Minified.zip
+            Minestom-Dungeons-Full.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
