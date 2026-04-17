@@ -9,6 +9,7 @@ import io.github.christechs.routerec.render.DrawMode;
 import io.github.christechs.routerec.render.RenderUtils;
 import io.github.christechs.routerec.render.RouteColor;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.entity.Player;
@@ -19,10 +20,7 @@ import net.minestom.server.utils.Direction;
 
 import java.io.FileReader;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class RouteManager {
     public static RenderMode renderMode = RenderMode.ALL;
@@ -76,7 +74,7 @@ public class RouteManager {
         currentRoomName = roomName;
 
         List<Tile> tiles = getTiles(instance);
-        int topLayer = getTopLayerOfRoom(instance, new Tile(15, 15));
+        int topLayer = getTopLayerOfRoom(instance, new Tile(7, 7));
 
         baseRotation = Rotations.NONE;
         clayPos = Vec.ZERO;
@@ -120,105 +118,106 @@ public class RouteManager {
         };
 
         JsonArray routes = getRoutesIgnoreCase(roomName);
-        if (routes == null || routes.isEmpty()) {
+        boolean hasRoutes = routes != null && !routes.isEmpty();
+
+        if (!hasRoutes) {
             instance.sendMessage(Component.text("No Routes Found for " + roomName));
-            return;
         }
 
         for (Player player : instance.getPlayers()) {
             RenderUtils.clearAll(player);
 
-            if (renderMode == RenderMode.NONE) continue;
+            if (hasRoutes && renderMode != RenderMode.NONE) {
+                for (int rIndex = 0; rIndex < routes.size(); rIndex++) {
+                    if (renderMode == RenderMode.STEP && rIndex != renderStepIndex) continue;
 
-            for (int rIndex = 0; rIndex < routes.size(); rIndex++) {
-                if (renderMode == RenderMode.STEP && rIndex != renderStepIndex) continue;
+                    JsonObject route = routes.get(rIndex).getAsJsonObject();
 
-                JsonObject route = routes.get(rIndex).getAsJsonObject();
+                    drawBoxShapesForPlayer(player, route.getAsJsonArray("etherwarps"), RouteColor.ETHERWARP, appliedRotation, activeAnchor);
+                    drawBoxShapesForPlayer(player, route.getAsJsonArray("mines"), RouteColor.MINE, appliedRotation, activeAnchor);
+                    drawBoxShapesForPlayer(player, route.getAsJsonArray("tnts"), RouteColor.TNT, appliedRotation, activeAnchor);
+                    drawBoxShapesForPlayer(player, route.getAsJsonArray("interacts"), RouteColor.INTERACT, appliedRotation, activeAnchor);
 
-                drawBoxShapesForPlayer(player, route.getAsJsonArray("etherwarps"), RouteColor.ETHERWARP, appliedRotation, activeAnchor);
-                drawBoxShapesForPlayer(player, route.getAsJsonArray("mines"), RouteColor.MINE, appliedRotation, activeAnchor);
-                drawBoxShapesForPlayer(player, route.getAsJsonArray("tnts"), RouteColor.TNT, appliedRotation, activeAnchor);
-                drawBoxShapesForPlayer(player, route.getAsJsonArray("interacts"), RouteColor.INTERACT, appliedRotation, activeAnchor);
+                    if (route.has("locations")) {
+                        List<Vec> points = parseLineLocations(route.getAsJsonArray("locations"), appliedRotation, activeAnchor);
 
-                if (route.has("locations")) {
-                    List<Vec> points = parseLineLocations(route.getAsJsonArray("locations"), appliedRotation, activeAnchor);
-
-                    if (!points.isEmpty() && (rIndex == 0 || renderMode == RenderMode.STEP)) {
-                        Pos startTextPos = Pos.fromPoint(points.get(0)).add(0, 0.5, 0);
-                        RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), startTextPos, Component.text("Start", net.kyori.adventure.text.format.NamedTextColor.GREEN));
+                        if (!points.isEmpty() && (rIndex == 0 || renderMode == RenderMode.STEP)) {
+                            Pos startTextPos = Pos.fromPoint(points.get(0)).add(0, 0.5, 0);
+                            RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), startTextPos, Component.text("Start", NamedTextColor.GREEN));
+                        }
+                        if (points.size() > 1) {
+                            RenderUtils.drawLine(player, "pearlroutes:line_" + UUID.randomUUID(), points, RouteColor.PATH_LINE, 3.0f, false);
+                        }
                     }
-                    if (points.size() > 1) {
-                        RenderUtils.drawLine(player, "pearlroutes:line_" + UUID.randomUUID(), points, RouteColor.PATH_LINE, 3.0f, false);
+
+                    if (route.has("secret") && route.getAsJsonObject("secret").has("location")) {
+                        JsonObject secret = route.getAsJsonObject("secret");
+                        JsonArray coords = secret.getAsJsonArray("location");
+                        String type = secret.has("type") ? secret.get("type").getAsString() : "interact";
+
+                        Vec basePos = relativeToActual(coords.get(0).getAsDouble(), coords.get(1).getAsDouble(), coords.get(2).getAsDouble(), appliedRotation, activeAnchor);
+                        basePos = basePos.add(offsetX, offsetY, offsetZ);
+
+                        if (type.equalsIgnoreCase("exitroute")) {
+                            RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.EXIT, DrawMode.SOLID_WITH_BORDER);
+                            RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(basePos).add(0.5, 1.2, 0.5), Component.text("Exit", NamedTextColor.WHITE));
+                        } else if (type.equalsIgnoreCase("bat")) {
+                            RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.BAT, DrawMode.SOLID_WITH_BORDER);
+                        } else if (type.equalsIgnoreCase("item")) {
+                            RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.ITEM, DrawMode.SOLID_WITH_BORDER);
+                            RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(basePos).add(0.5, 1.2, 0.5), Component.text("Item", RouteColor.ITEM.textColor));
+                        } else {
+                            RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.SECRET, DrawMode.SOLID_WITH_BORDER);
+                        }
                     }
-                }
 
-                if (route.has("secret") && route.getAsJsonObject("secret").has("location")) {
-                    JsonObject secret = route.getAsJsonObject("secret");
-                    JsonArray coords = secret.getAsJsonArray("location");
-                    String type = secret.has("type") ? secret.get("type").getAsString() : "interact";
+                    if (route.has("enderpearls")) {
+                        JsonArray pearls = route.getAsJsonArray("enderpearls");
+                        JsonArray angles = route.has("enderpearlangles") ? route.getAsJsonArray("enderpearlangles") : null;
 
-                    Vec basePos = relativeToActual(coords.get(0).getAsDouble(), coords.get(1).getAsDouble(), coords.get(2).getAsDouble(), appliedRotation, activeAnchor);
-                    basePos = basePos.add(offsetX, offsetY, offsetZ);
+                        float yawOffset = switch (appliedRotation) {
+                            case SOUTH -> 0f;
+                            case WEST -> 90f;
+                            case NORTH -> 180f;
+                            case EAST -> 270f;
+                            default -> 0f;
+                        };
 
-                    if (type.equalsIgnoreCase("exitroute")) {
-                        RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.EXIT, DrawMode.SOLID_WITH_BORDER);
-                        RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(basePos).add(0.5, 1.2, 0.5), Component.text("Exit", net.kyori.adventure.text.format.NamedTextColor.WHITE));
-                    } else if (type.equalsIgnoreCase("bat")) {
-                        RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.BAT, DrawMode.SOLID_WITH_BORDER);
-                    } else if (type.equalsIgnoreCase("item")) {
-                        RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.ITEM, DrawMode.SOLID_WITH_BORDER);
-                        RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(basePos).add(0.5, 1.2, 0.5), Component.text("Item", RouteColor.ITEM.textColor));
-                    } else {
-                        RenderUtils.drawBox(player, "pearlroutes:secret_" + UUID.randomUUID(), basePos, basePos.add(1, 1, 1), RouteColor.SECRET, DrawMode.SOLID_WITH_BORDER);
-                    }
-                }
+                        for (int i = 0; i < pearls.size(); i++) {
+                            JsonArray p = pearls.get(i).getAsJsonArray();
+                            Vec worldPos = relativeToActual(p.get(0).getAsDouble(), p.get(1).getAsDouble(), p.get(2).getAsDouble(), appliedRotation, activeAnchor);
+                            worldPos = worldPos.add(offsetX, offsetY, offsetZ);
 
-                if (route.has("enderpearls")) {
-                    JsonArray pearls = route.getAsJsonArray("enderpearls");
-                    JsonArray angles = route.has("enderpearlangles") ? route.getAsJsonArray("enderpearlangles") : null;
+                            Vec minBox = worldPos.sub(0.25, 0, 0.25);
+                            Vec maxBox = worldPos.add(0.25, 0.5, 0.25);
 
-                    float yawOffset = switch (appliedRotation) {
-                        case SOUTH -> 0f;
-                        case WEST -> 90f;
-                        case NORTH -> 180f;
-                        case EAST -> 270f;
-                        default -> 0f;
-                    };
+                            RenderUtils.drawBox(player, "pearlroutes:pearl_" + UUID.randomUUID(), minBox, maxBox, RouteColor.ENDERPEARL, DrawMode.SOLID_WITH_BORDER);
+                            RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(worldPos).add(0, 0.8, 0), Component.text("Pearl " + (i + 1), RouteColor.ENDERPEARL.textColor));
 
-                    for (int i = 0; i < pearls.size(); i++) {
-                        JsonArray p = pearls.get(i).getAsJsonArray();
-                        Vec worldPos = relativeToActual(p.get(0).getAsDouble(), p.get(1).getAsDouble(), p.get(2).getAsDouble(), appliedRotation, activeAnchor);
-                        worldPos = worldPos.add(offsetX, offsetY, offsetZ);
+                            if (angles != null && i < angles.size()) {
+                                JsonArray ang = angles.get(i).getAsJsonArray();
+                                double pitch = ang.get(0).getAsDouble();
+                                double relativeYaw = ang.get(1).getAsDouble();
 
-                        Vec minBox = worldPos.sub(0.25, 0, 0.25);
-                        Vec maxBox = worldPos.add(0.25, 0.5, 0.25);
+                                double yaw = relativeYaw + yawOffset + 90.0;
+                                double yawRadians = Math.toRadians(yaw);
+                                double pitchRadians = Math.toRadians(pitch);
 
-                        RenderUtils.drawBox(player, "pearlroutes:pearl_" + UUID.randomUUID(), minBox, maxBox, RouteColor.ENDERPEARL, DrawMode.SOLID_WITH_BORDER);
-                        RenderUtils.drawText(player, "pearlroutes:text_" + UUID.randomUUID(), Pos.fromPoint(worldPos).add(0, 0.8, 0), Component.text("Pearl " + (i + 1), RouteColor.ENDERPEARL.textColor));
+                                double length = 10.0;
+                                double xDir = -Math.sin(yawRadians) * Math.cos(pitchRadians);
+                                double yDir = -Math.sin(pitchRadians);
+                                double zDir = Math.cos(yawRadians) * Math.cos(pitchRadians);
 
-                        if (angles != null && i < angles.size()) {
-                            JsonArray ang = angles.get(i).getAsJsonArray();
-                            double pitch = ang.get(0).getAsDouble();
-                            double relativeYaw = ang.get(1).getAsDouble();
+                                double sideLength = Math.sqrt(xDir * xDir + yDir * yDir + zDir * zDir);
+                                xDir /= sideLength;
+                                yDir /= sideLength;
+                                zDir /= sideLength;
 
-                            double yaw = relativeYaw + yawOffset + 90.0;
-                            double yawRadians = Math.toRadians(yaw);
-                            double pitchRadians = Math.toRadians(pitch);
+                                Vec startLine = worldPos.add(0, 1.62, 0);
+                                Vec endLine = startLine.add(xDir * length, yDir * length, zDir * length);
 
-                            double length = 10.0;
-                            double xDir = -Math.sin(yawRadians) * Math.cos(pitchRadians);
-                            double yDir = -Math.sin(pitchRadians);
-                            double zDir = Math.cos(yawRadians) * Math.cos(pitchRadians);
-
-                            double sideLength = Math.sqrt(xDir * xDir + yDir * yDir + zDir * zDir);
-                            xDir /= sideLength;
-                            yDir /= sideLength;
-                            zDir /= sideLength;
-
-                            Vec startLine = worldPos.add(0, 1.62, 0);
-                            Vec endLine = startLine.add(xDir * length, yDir * length, zDir * length);
-
-                            RenderUtils.drawLine(player, "pearlroutes:pearlline_" + UUID.randomUUID(), List.of(startLine, endLine), RouteColor.ENDERPEARL, 5.0f, false);
+                                RenderUtils.drawLine(player, "pearlroutes:pearlline_" + UUID.randomUUID(), List.of(startLine, endLine), RouteColor.ENDERPEARL, 5.0f, false);
+                            }
                         }
                     }
                 }
@@ -310,31 +309,28 @@ public class RouteManager {
 
     private static List<Tile> getTiles(Instance instance) {
         List<Tile> tiles = new ArrayList<>();
-        java.util.Set<String> processedTiles = new java.util.HashSet<>();
+        Set<String> processedTiles = new HashSet<>();
 
         for (Chunk chunk : instance.getChunks()) {
-            boolean hasBlocks = false;
-
             for (int x = 0; x < Chunk.CHUNK_SIZE_X; x++) {
                 for (int z = 0; z < Chunk.CHUNK_SIZE_Z; z++) {
                     for (int y = 12; y < 160; y++) {
                         if (!chunk.getBlock(x, y, z).isAir()) {
-                            hasBlocks = true;
+                            int blockX = chunk.getChunkX() * 16 + x;
+                            int blockZ = chunk.getChunkZ() * 16 + z;
+
+                            int tileX = (int) Math.floor((blockX + 8) / 32.0) * 32 + 7;
+                            int tileZ = (int) Math.floor((blockZ + 8) / 32.0) * 32 + 7;
+
+                            String key = tileX + "," + tileZ;
+
+                            if (processedTiles.add(key)) {
+                                tiles.add(new Tile(tileX, tileZ));
+                            }
+
                             break;
                         }
                     }
-                    if (hasBlocks) break;
-                }
-                if (hasBlocks) break;
-            }
-
-            if (hasBlocks) {
-                int tileX = chunk.getChunkX() / 2;
-                int tileZ = chunk.getChunkZ() / 2;
-                String key = tileX + "," + tileZ;
-
-                if (processedTiles.add(key)) {
-                    tiles.add(new Tile(tileX * 32 + 15, tileZ * 32 + 15));
                 }
             }
         }

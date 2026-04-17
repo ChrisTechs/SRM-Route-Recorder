@@ -104,8 +104,7 @@ public class Superboom implements CustomItem {
 
                         if (isCrackedBrick(instance, neighbor) || isCrypt(instance, neighbor)) {
                             queue.add(neighbor);
-                        }
-                        else if (isCryptTop(currentBlock) && isCryptTop(neighborBlock)) {
+                        } else if (isCryptTop(currentBlock) && isCryptTop(neighborBlock)) {
                             queue.add(neighbor);
                         }
                     }

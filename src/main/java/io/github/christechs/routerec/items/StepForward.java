@@ -41,8 +41,7 @@ public class StepForward implements CustomItem {
                 event.getPlayer().sendMessage(Component.text("Moved to Recording Step: " + RecorderManager.currentStep, NamedTextColor.AQUA));
                 RecorderManager.updateSidebar();
                 RouteManager.visualize(RouteManager.currentRoomName, event.getPlayer().getInstance());
-            }
-            else {
+            } else {
                 String key = RouteManager.getMatchedKey(RouteManager.currentRoomName);
                 if (key == null) return;
 

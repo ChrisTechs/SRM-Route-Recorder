@@ -43,8 +43,7 @@ public class StepBackward implements CustomItem {
                 } else {
                     event.getPlayer().sendMessage(Component.text("Already at the first recording step.", NamedTextColor.RED));
                 }
-            }
-            else {
+            } else {
                 if (RouteManager.renderStepIndex > 0) {
                     RouteManager.renderStepIndex--;
                     event.getPlayer().sendMessage(Component.text("Showing Step: " + RouteManager.renderStepIndex, NamedTextColor.RED));
