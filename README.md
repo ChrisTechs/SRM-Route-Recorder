@@ -76,11 +76,7 @@ But it also generates:
 
 routes/pearlroutes-legacy.json
 
-pearlroutes-current-recording.json - uses 100% odin rotations but some rooms wont work with the current version of SRM
-
-
-pearlroutes-legacy.json 
-is made compatible with the current version of SRM
+ignore the pearlroutes-legacy.json file. 
 
 There is still a few issues and bugs but it is in a working state for route recording I think.
 
