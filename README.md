@@ -1,4 +1,4 @@
-# Rought Guide on using the Route Recorder Server
+# Rough Guide on using the Route Recorder Server
 ## Quick Notes
 - The server is for Minecraft 1.21.11
 - No clientside mods are required but it is recommended to use https://github.com/ChrisTechs/mc_debug_renderer - updated to 1.21.11 version of original mod
