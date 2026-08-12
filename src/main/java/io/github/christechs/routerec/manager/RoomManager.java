@@ -76,6 +76,10 @@ public class RoomManager {
                         double sumX = 0, sumZ = 0;
                         int blockCount = 0;
 
+                        boolean isF7Boss = file.getName().toLowerCase().contains("f7boss");
+                        int offsetX = isF7Boss ? -16 : -8;
+                        int offsetZ = isF7Boss ? -16 : -8;
+
                         for (PolarChunk pChunk : polarWorld.chunks()) {
                             int chunkX = pChunk.x();
                             int chunkZ = pChunk.z();
@@ -94,8 +98,8 @@ public class RoomManager {
                                             int globalX = (chunkX * 16) + x;
                                             int globalZ = (chunkZ * 16) + z;
 
-                                            int shiftedX = globalX - 8;
-                                            int shiftedZ = globalZ - 8;
+                                            int shiftedX = globalX + offsetX;
+                                            int shiftedZ = globalZ + offsetZ;
 
                                             batch.setBlock(shiftedX, y, shiftedZ, block);
 
