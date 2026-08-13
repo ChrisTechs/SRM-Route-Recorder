@@ -20,6 +20,7 @@ import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerPluginMessageEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;
+import net.minestom.server.event.player.PlayerTickEvent;
 import net.minestom.server.event.trait.PlayerEvent;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
@@ -27,14 +28,19 @@ import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.world.DimensionType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RouteRecorderServer {
 
     private static final List<CustomItem> CUSTOM_ITEMS = List.of(
             new AOTV(), new Stonk(), new Superboom(), new Pearl(), new WorldModifier(), new Plank(),
-            new StepBackward(), new StepForward()
+            new StepBackward(), new StepForward(), new BonzoStaff()
     );
     public static RegistryKey<DimensionType> FULLBRIGHT_DIMENSION_KEY;
+
+    private static final Map<UUID, Long> LAVA_COOLDOWNS = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         MinecraftServer server = MinecraftServer.init();
@@ -66,6 +72,7 @@ public class RouteRecorderServer {
             RenderUtils.clearAll(event.getPlayer());
             Superboom.clearMemory();
             WorldModifier.clearMemory();
+            LAVA_COOLDOWNS.remove(event.getPlayer().getUuid());
         });
 
         globalEventHandler.addListener(PlayerSpawnEvent.class, event -> {
@@ -73,6 +80,36 @@ public class RouteRecorderServer {
             player.setAllowFlying(true);
             player.getInventory().clear();
             CUSTOM_ITEMS.forEach(item -> player.getInventory().addItemStack(item.getItem()));
+        });
+
+        globalEventHandler.addListener(PlayerTickEvent.class, event -> {
+            Player player = event.getPlayer();
+            if (player.getInstance() != null) {
+                Block block = player.getInstance().getBlock(player.getPosition());
+                Block feetBlock = player.getInstance().getBlock(player.getPosition().sub(0, 0.2, 0));
+
+                if (block.name().toLowerCase().contains("lava") || feetBlock.name().toLowerCase().contains("lava")) {
+                    long now = System.currentTimeMillis();
+                    if (now - LAVA_COOLDOWNS.getOrDefault(player.getUuid(), 0L) > 500) {
+                        LAVA_COOLDOWNS.put(player.getUuid(), now);
+
+                        float pitch = player.getPosition().pitch();
+                        boolean isSuper = pitch <= -40f;
+
+                        double jumpVelocityY = 35.0;
+                        if (isSuper) {
+                            jumpVelocityY *= 1.3;
+                        }
+
+                        double surfaceY = Math.floor(player.getPosition().y()) + 0.95;
+                        if (player.getPosition().y() < surfaceY) {
+                            player.teleport(player.getPosition().withY(surfaceY));
+                        }
+
+                        player.setVelocity(player.getVelocity().withY(jumpVelocityY));
+                    }
+                }
+            }
         });
 
         EventNode<PlayerEvent> itemNode = EventNode.type("custom-items", EventFilter.PLAYER);

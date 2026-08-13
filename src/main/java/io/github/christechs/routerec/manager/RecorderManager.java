@@ -77,6 +77,7 @@ public class RecorderManager {
             newStep.add("tnts", new JsonArray());
             newStep.add("enderpearls", new JsonArray());
             newStep.add("enderpearlangles", new JsonArray());
+            newStep.add("bonzo_staffs", new JsonArray());
             roomRoutes.add(newStep);
         }
         return roomRoutes.get(currentStep).getAsJsonObject();
@@ -106,6 +107,11 @@ public class RecorderManager {
     public static void recordTnt(Pos pos) {
         if (!isRecording || isPaused) return;
         addCoordinateToArray("tnts", pos.asVec());
+    }
+
+    public static void recordBonzo(Vec pos) {
+        if (!isRecording || isPaused) return;
+        addCoordinateToArray("bonzo_staffs", pos);
     }
 
     public static void recordPearl(Pos startPos, float pitch, float yaw) {

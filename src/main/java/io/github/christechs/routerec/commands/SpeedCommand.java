@@ -15,20 +15,23 @@ public class SpeedCommand extends Command {
         var speedArg = ArgumentType.Float("speed");
 
         setDefaultExecutor((sender, context) -> {
-            sender.sendMessage(Component.text("Usage: /speed <amount>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /speed <Hypixel Speed Stat>", NamedTextColor.RED));
         });
 
         addSyntax((sender, context) -> {
             if (!(sender instanceof Player player)) return;
 
-            float speed = context.get(speedArg) / 10.0f;
+            float hypixelSpeedStat = context.get(speedArg);
+            float speedModifier = hypixelSpeedStat / 100.0f;
 
             if (player.isFlying()) {
-                player.setFlyingSpeed(speed);
-                player.sendMessage(Component.text("Flight speed set to " + context.get(speedArg), NamedTextColor.GREEN));
+                float baseFlySpeed = 0.05f;
+                player.setFlyingSpeed(baseFlySpeed * speedModifier);
+                player.sendMessage(Component.text("Flight Speed set to " + hypixelSpeedStat, NamedTextColor.GREEN));
             } else {
-                player.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(speed);
-                player.sendMessage(Component.text("Walk speed set to " + context.get(speedArg), NamedTextColor.GREEN));
+                float baseWalkSpeed = 0.1f;
+                player.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(baseWalkSpeed * speedModifier);
+                player.sendMessage(Component.text("Walk Speed set to " + hypixelSpeedStat, NamedTextColor.GREEN));
             }
         }, speedArg);
     }

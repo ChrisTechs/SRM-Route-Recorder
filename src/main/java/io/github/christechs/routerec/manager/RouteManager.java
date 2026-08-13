@@ -138,6 +138,10 @@ public class RouteManager {
                     drawBoxShapesForPlayer(player, route.getAsJsonArray("tnts"), RouteColor.TNT, appliedRotation, activeAnchor);
                     drawBoxShapesForPlayer(player, route.getAsJsonArray("interacts"), RouteColor.INTERACT, appliedRotation, activeAnchor);
 
+                    if (route.has("bonzo_staffs")) {
+                        drawBoxShapesForPlayer(player, route.getAsJsonArray("bonzo_staffs"), RouteColor.TNT, appliedRotation, activeAnchor);
+                    }
+
                     if (route.has("locations")) {
                         List<Vec> points = parseLineLocations(route.getAsJsonArray("locations"), appliedRotation, activeAnchor);
 
