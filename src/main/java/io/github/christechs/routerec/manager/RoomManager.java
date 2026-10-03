@@ -10,6 +10,8 @@ import net.minestom.server.instance.Chunk;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.batch.AbsoluteBlockBatch;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.registry.RegistryKey;
+import net.minestom.server.world.DimensionType;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -23,6 +25,8 @@ public class RoomManager {
     public static final File POLAR_DIR = new File("polar_worlds");
     private static InstanceContainer currentLoadedInstance = null;
     private static InstanceContainer oldInstance = null;
+
+    private static boolean useDim1 = true;
 
     public static void init() {
         if (!POLAR_DIR.exists()) POLAR_DIR.mkdirs();
@@ -46,7 +50,9 @@ public class RoomManager {
 
         InstanceContainer tempInstance = MinecraftServer.getInstanceManager().createInstanceContainer();
 
-        InstanceContainer shiftedInstance = MinecraftServer.getInstanceManager().createInstanceContainer(RouteRecorderServer.FULLBRIGHT_DIMENSION_KEY);
+        useDim1 = !useDim1;
+        RegistryKey<DimensionType> dimKey = useDim1 ? RouteRecorderServer.DIM_1 : RouteRecorderServer.DIM_2;
+        InstanceContainer shiftedInstance = MinecraftServer.getInstanceManager().createInstanceContainer(dimKey);
         currentLoadedInstance = shiftedInstance;
 
         try {
@@ -54,18 +60,28 @@ public class RoomManager {
             tempInstance.setChunkLoader(loader);
             PolarWorld polarWorld = loader.world();
 
+            boolean isF7Boss = file.getName().toLowerCase().contains("f7boss");
+
+            final int offsetX = isF7Boss ? -16 : -168;
+            final int offsetZ = isF7Boss ? -16 : -168;
+
+            final int chunkOffsetX = offsetX >> 4;
+            final int chunkOffsetZ = offsetZ >> 4;
+
             return CompletableFuture.allOf(polarWorld.chunks().stream()
                             .map(chunk -> tempInstance.loadChunk(chunk.x(), chunk.z()))
                             .toArray(CompletableFuture[]::new))
                     .thenCompose(v -> {
                         List<CompletableFuture<Chunk>> chunkFutures = new ArrayList<>();
                         for (PolarChunk pChunk : polarWorld.chunks()) {
-                            int cx = pChunk.x();
-                            int cz = pChunk.z();
-                            chunkFutures.add(shiftedInstance.loadChunk(cx, cz));
-                            chunkFutures.add(shiftedInstance.loadChunk(cx - 1, cz));
-                            chunkFutures.add(shiftedInstance.loadChunk(cx, cz - 1));
-                            chunkFutures.add(shiftedInstance.loadChunk(cx - 1, cz - 1));
+                            int cx = pChunk.x() + chunkOffsetX;
+                            int cz = pChunk.z() + chunkOffsetZ;
+
+                            for (int x = -1; x <= 1; x++) {
+                                for (int z = -1; z <= 1; z++) {
+                                    chunkFutures.add(shiftedInstance.loadChunk(cx + x, cz + z));
+                                }
+                            }
                         }
 
                         return CompletableFuture.allOf(chunkFutures.toArray(new CompletableFuture[0]));
@@ -75,10 +91,6 @@ public class RoomManager {
                         AbsoluteBlockBatch batch = new AbsoluteBlockBatch();
                         double sumX = 0, sumZ = 0;
                         int blockCount = 0;
-
-                        boolean isF7Boss = file.getName().toLowerCase().contains("f7boss");
-                        int offsetX = isF7Boss ? -16 : -8;
-                        int offsetZ = isF7Boss ? -16 : -8;
 
                         for (PolarChunk pChunk : polarWorld.chunks()) {
                             int chunkX = pChunk.x();

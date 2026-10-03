@@ -13,6 +13,7 @@ import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.network.packet.server.play.PlayerInfoUpdatePacket;
 import net.minestom.server.network.packet.server.play.ScoreboardObjectivePacket;
+import net.minestom.server.network.packet.server.play.TeamsPacket;
 import net.minestom.server.timer.TaskSchedule;
 
 import java.io.File;
@@ -69,7 +70,6 @@ public class LoadCommand extends Command {
                     return;
                 }
 
-                player.setGameMode(GameMode.SPECTATOR);
                 player.setInstance(result.instance(), result.spawnPos()).thenRun(() -> {
                     RoomManager.cleanupOldInstance();
 
@@ -90,39 +90,14 @@ public class LoadCommand extends Command {
                     player.sendMessage(Component.text("Room loaded and routes visualized.", NamedTextColor.GREEN));
 
                     MinecraftServer.getSchedulerManager().buildTask(() -> {
+                        player.sendPacket(new ScoreboardObjectivePacket("SBScoreboard", (byte) 1, null, null, null));
+                        player.sendPacket(new TeamsPacket("odin_floor_trick", new TeamsPacket.RemoveTeamAction()));
 
-                        player.sendPacket(new ScoreboardObjectivePacket(
-                                "SBScoreboard",
-                                (byte) 1,
-                                null,
-                                null,
-                                null
-                        ));
+                        player.sendPacket(new ScoreboardObjectivePacket("SBScoreboard", (byte) 0, Component.text("SKYBLOCK"), ScoreboardObjectivePacket.Type.INTEGER, null));
+                        player.sendPacket(new PlayerInfoUpdatePacket(EnumSet.of(PlayerInfoUpdatePacket.Action.ADD_PLAYER, PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of(new PlayerInfoUpdatePacket.Entry(UUID.nameUUIDFromBytes("odin_dummy".getBytes()), "!odin_dummy", List.of(), false, 0, GameMode.SPECTATOR, Component.text("Dungeon: The Catacombs"), null, 0, false))));
+                        player.sendPacket(new TeamsPacket("odin_floor_trick", new TeamsPacket.CreateTeamAction(Component.empty(), (byte) 0, TeamsPacket.NameTagVisibility.ALWAYS, TeamsPacket.CollisionRule.ALWAYS, NamedTextColor.WHITE, Component.text("The Catacombs (F7)"), Component.empty(), List.of())));
 
-                        player.sendPacket(new ScoreboardObjectivePacket(
-                                "SBScoreboard",
-                                (byte) 0,
-                                Component.text("SKYBLOCK"),
-                                ScoreboardObjectivePacket.Type.INTEGER,
-                                null
-                        ));
-
-                        player.sendPacket(new PlayerInfoUpdatePacket(
-                                EnumSet.of(PlayerInfoUpdatePacket.Action.ADD_PLAYER, PlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
-                                List.of(new PlayerInfoUpdatePacket.Entry(
-                                        UUID.randomUUID(),
-                                        "!odin_dummy",
-                                        List.of(),
-                                        false,
-                                        0,
-                                        GameMode.SPECTATOR,
-                                        Component.text("Dungeon: The Catacombs"),
-                                        null,
-                                        0,
-                                        false
-                                ))
-                        ));
-
+                        player.sendMessage(Component.text("Room loaded and routes visualized.", NamedTextColor.GREEN));
                     }).delay(TaskSchedule.tick(10)).schedule();
                 });
             });

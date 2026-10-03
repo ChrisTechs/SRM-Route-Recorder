@@ -38,21 +38,27 @@ public class RouteRecorderServer {
             new AOTV(), new Stonk(), new Superboom(), new Pearl(), new WorldModifier(), new Plank(),
             new StepBackward(), new StepForward(), new BonzoStaff()
     );
-    public static RegistryKey<DimensionType> FULLBRIGHT_DIMENSION_KEY;
+
+    public static RegistryKey<DimensionType> DIM_1;
+    public static RegistryKey<DimensionType> DIM_2;
+    public static InstanceContainer lobby;
 
     private static final Map<UUID, Long> LAVA_COOLDOWNS = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         MinecraftServer server = MinecraftServer.init();
 
-        DimensionType fullbright = DimensionType.builder().ambientLight(2.0f).fixedTime(true).build();
-        FULLBRIGHT_DIMENSION_KEY = MinecraftServer.getDimensionTypeRegistry().register(Key.key("fullbright"), fullbright);
+        DimensionType dim1 = DimensionType.builder().ambientLight(2.0f).fixedTime(true).build();
+        DimensionType dim2 = DimensionType.builder().ambientLight(1.99f).fixedTime(true).build();
+
+        DIM_1 = MinecraftServer.getDimensionTypeRegistry().register(Key.key("dim_1"), dim1);
+        DIM_2 = MinecraftServer.getDimensionTypeRegistry().register(Key.key("dim_2"), dim2);
 
         RouteManager.init("routes/pearlroutes.json");
         SecretManager.init("routes/secretlocations.json");
         RoomManager.init();
 
-        InstanceContainer lobby = MinecraftServer.getInstanceManager().createInstanceContainer(FULLBRIGHT_DIMENSION_KEY);
+        lobby = MinecraftServer.getInstanceManager().createInstanceContainer(DIM_1);
         lobby.setGenerator(unit -> unit.modifier().fillHeight(0, 40, Block.DIRT));
 
         GlobalEventHandler globalEventHandler = MinecraftServer.getGlobalEventHandler();
@@ -92,20 +98,12 @@ public class RouteRecorderServer {
                     long now = System.currentTimeMillis();
                     if (now - LAVA_COOLDOWNS.getOrDefault(player.getUuid(), 0L) > 500) {
                         LAVA_COOLDOWNS.put(player.getUuid(), now);
-
                         float pitch = player.getPosition().pitch();
                         boolean isSuper = pitch <= -40f;
-
                         double jumpVelocityY = 35.0;
-                        if (isSuper) {
-                            jumpVelocityY *= 1.3;
-                        }
-
+                        if (isSuper) jumpVelocityY *= 1.3;
                         double surfaceY = Math.floor(player.getPosition().y()) + 0.95;
-                        if (player.getPosition().y() < surfaceY) {
-                            player.teleport(player.getPosition().withY(surfaceY));
-                        }
-
+                        if (player.getPosition().y() < surfaceY) player.teleport(player.getPosition().withY(surfaceY));
                         player.setVelocity(player.getVelocity().withY(jumpVelocityY));
                     }
                 }
@@ -129,8 +127,8 @@ public class RouteRecorderServer {
         MinecraftServer.getCommandManager().register(new RoutesCommand());
 
         MinecraftServer.getSchedulerManager().buildTask(() -> {
-            if (RecorderManager.isRecording && !RecorderManager.isPaused) {
-                for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+            for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                if (RecorderManager.isRecording && !RecorderManager.isPaused) {
                     RecorderManager.recordLocation(p.getPosition().asVec());
                 }
             }
