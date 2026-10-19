@@ -74,7 +74,7 @@ public class RouteManager {
         currentRoomName = roomName;
 
         List<Tile> tiles = getTiles(instance);
-        int topLayer = getTopLayerOfRoom(instance, new Tile(7, 7));
+        int topLayer = tiles.isEmpty() ? 0 : getTopLayerOfRoom(instance, tiles.get(0));
 
         baseRotation = Rotations.NONE;
         clayPos = Vec.ZERO;
